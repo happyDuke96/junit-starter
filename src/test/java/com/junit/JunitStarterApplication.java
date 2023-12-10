@@ -3,12 +3,15 @@ package com.junit;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.launcher.Launcher;
 import org.junit.platform.launcher.LauncherDiscoveryRequest;
+import org.junit.platform.launcher.TagFilter;
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 
 import java.io.PrintWriter;
 
+/*Maven,Gradle - по умолчанию использует этот лаунчер чтобы мониторить какой тест fail был какой успешно отработал
+* Maven command -  includeTag -> mvn clean test -Dgroups=login, excludeTag -> mvn clean test -DexcludedGroups=login */
 public class JunitStarterApplication {
 
 
@@ -22,6 +25,10 @@ public class JunitStarterApplication {
         var discoveryRequest = LauncherDiscoveryRequestBuilder
                 .request()
                 .selectors(DiscoverySelectors.selectPackage("com.junit.service"))
+                .filters(
+                        TagFilter.includeTags("all"),
+                        TagFilter.excludeTags("login")
+                )
 //                .listeners()
                 .build();
 

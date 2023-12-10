@@ -22,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
  соответственно @BeforeAll и @AfterAll не будет работать ,потому что он должен быть для всех тестов один чтобы работал
  нам нужен @BeforeAll и @AfterAll сделать статичный или  @TestInstance(TestInstance.Lifecycle.PER_CLASS) */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+/* @Tag - с помощью этой аннотации,во время запуска,можем исключить или наоборот запускает тестов с помеченным аннотации*/
+@Tag("all")
 class UserServiceTest {
 
     private UserService userService;
@@ -64,6 +66,7 @@ class UserServiceTest {
     }
 
     @Test
+    @Tag("login")
     void loginSuccessIfUserExists() {
         userService.add(JOHN);
 //    assertj
@@ -87,6 +90,7 @@ class UserServiceTest {
     }
 
     @Test
+    @Tag("login")
     void logicFailureIfUserDoesNotExist() {
         userService.add(SARAH);
 
@@ -123,7 +127,7 @@ class UserServiceTest {
     }
 
     @Test
-    @org.junit.Test(expected = IllegalArgumentException.class)     /*для нижеуказанного функционала,в старых версиях junit4 надо было использовать в аннотации */
+//    @org.junit.Test(expected = IllegalArgumentException.class)     /*для нижеуказанного функционала,в старых версиях junit4 надо было использовать в аннотации */
     void throwExceptionIfUserNameOrPasswordNull2() {
 //        best practice
 //        assertThrows(IllegalArgumentException.class,() -> userService.login(null,"test_123"));
