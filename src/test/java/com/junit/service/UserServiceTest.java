@@ -3,10 +3,10 @@ package com.junit.service;
 import com.junit.dto.User;
 import org.junit.jupiter.api.*;
 
+import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Lifecycle Test - @BeforeAll -- @BeforeEach -- Test -- @AfterEach -- @AfterAll
@@ -44,6 +44,8 @@ class UserServiceTest {
     void usersEmptyIfUsersNotAdded() {
         var users = userService.getAll();
 
+        //hamcrest
+//        MatcherAssert.assertThat(users,IsEmptyCollection.empty());
 //        Согласно источнику, сообщение печатается только в том случае, если утверждение не выполнено.
         assertTrue(users.isEmpty(), () -> "Users is empty");
 //        assertFalse(users.isEmpty(),() -> "Users should be empty");
@@ -52,29 +54,31 @@ class UserServiceTest {
 
     @Test
     void usersSizeIfUsersAdded() {
-        userService.add(JOHN);
-        userService.add(SARAH);
+        userService.add(JOHN, SARAH);
 
         var users = userService.getAll();
 
-        Assertions.assertEquals(2, users.size());
+        org.assertj.core.api.Assertions.assertThat(users).hasSize(2);
+//        Assertions.assertEquals(2, users.size());
         System.out.println("usersSizeIfUsersAdded Test " + this);
     }
 
     @Test
     void loginSuccessIfUserExists() {
         userService.add(JOHN);
-
+//    assertj
         Optional<User> maybeUser = userService.login(JOHN.getUsername(), JOHN.getPassword());
-        assertTrue(maybeUser.isPresent());
+        org.assertj.core.api.Assertions.assertThat(maybeUser).isPresent();
+//        assertTrue(maybeUser.isPresent());
 
-        maybeUser.ifPresent(user -> assertEquals(JOHN,user));
+        maybeUser.ifPresent(user -> org.assertj.core.api.Assertions.assertThat(user).isEqualTo(JOHN));
+//        maybeUser.ifPresent(user -> assertEquals(JOHN,user));
 
     }
 
 
     @Test
-    void logicFailureIfPasswordNotCorrect(){
+    void logicFailureIfPasswordNotCorrect() {
         userService.add(SARAH);
 
         Optional<User> maybeUser = userService.login(SARAH.getUsername(), "test_dummy");
@@ -83,11 +87,53 @@ class UserServiceTest {
     }
 
     @Test
-    void logicFailureIfUserDoesNotExist(){
+    void logicFailureIfUserDoesNotExist() {
         userService.add(SARAH);
 
         Optional<User> maybeUser = userService.login("dummy", SARAH.getPassword());
         assertTrue(maybeUser.isEmpty());
+    }
+
+
+    @Test
+    void userConvertedToMapById() {
+        userService.add(JOHN, SARAH);
+        Map<Integer, User> users = userService.getAllConvertedMapValue();
+
+        //hamcrest
+//        MatcherAssert.assertThat(users, IsMapContaining.hasKey(JOHN.getId()));
+
+//        assertj
+        assertAll(
+                () -> org.assertj.core.api.Assertions.assertThat(users).containsKeys(JOHN.getId(), SARAH.getId()),
+                () -> org.assertj.core.api.Assertions.assertThat(users).containsValues(JOHN, SARAH)
+        );
+
+    }
+
+    @Test
+    void throwExceptionIfUserNameOrPasswordNull() {
+        // bad practice
+        try {
+            userService.login(null, "test_123");
+            Assertions.fail("login should throw exception on null username");
+        } catch (IllegalArgumentException e) {
+            assertTrue(true);
+        }
+    }
+
+    @Test
+    @org.junit.Test(expected = IllegalArgumentException.class)     /*для нижеуказанного функционала,в старых версиях junit4 надо было использовать в аннотации */
+    void throwExceptionIfUserNameOrPasswordNull2() {
+//        best practice
+//        assertThrows(IllegalArgumentException.class,() -> userService.login(null,"test_123"));
+        assertAll(
+                () -> {
+                    var exception = assertThrows(IllegalArgumentException.class, () -> userService.login(null, "test_123"));
+                    org.assertj.core.api.Assertions.assertThat(exception.getMessage()).isEqualTo("username or password can't be null");
+                },
+                () -> assertThrows(IllegalArgumentException.class, () -> userService.login("test_123", null))
+        );
     }
 
     @AfterEach
