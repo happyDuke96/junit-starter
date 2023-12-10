@@ -24,6 +24,12 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 /* @Tag - с помощью этой аннотации,во время запуска,можем исключить или наоборот запускает тестов с помеченным аннотации*/
 @Tag("all")
+        /*По умолчанию запускается с помощью какой-то алгоритма,но можно изменить последовательность запуска тестов есть 4 варианты,
+         * MethodOrderer.MethodName, MethodOrderer.OrderAnnotation, MethodOrderer.DisplayName , MethodOrderer.Random
+         * но лучше их не использовать,в пользу chain gang anti - pattern
+         * Пара тестов, которые должны выполняться в определенном порядке, т.е. один тест меняет глобальное состояние системы
+         * (глобальные переменные, данные в базе данных) и от этого зависит следующий тест(ы). */
+//@TestMethodOrder(MethodOrderer.Random.class)
 class UserServiceTest {
 
     private UserService userService;
@@ -66,40 +72,6 @@ class UserServiceTest {
     }
 
     @Test
-    @Tag("login")
-    void loginSuccessIfUserExists() {
-        userService.add(JOHN);
-//    assertj
-        Optional<User> maybeUser = userService.login(JOHN.getUsername(), JOHN.getPassword());
-        org.assertj.core.api.Assertions.assertThat(maybeUser).isPresent();
-//        assertTrue(maybeUser.isPresent());
-
-        maybeUser.ifPresent(user -> org.assertj.core.api.Assertions.assertThat(user).isEqualTo(JOHN));
-//        maybeUser.ifPresent(user -> assertEquals(JOHN,user));
-
-    }
-
-
-    @Test
-    void logicFailureIfPasswordNotCorrect() {
-        userService.add(SARAH);
-
-        Optional<User> maybeUser = userService.login(SARAH.getUsername(), "test_dummy");
-
-        assertTrue(maybeUser.isEmpty());
-    }
-
-    @Test
-    @Tag("login")
-    void logicFailureIfUserDoesNotExist() {
-        userService.add(SARAH);
-
-        Optional<User> maybeUser = userService.login("dummy", SARAH.getPassword());
-        assertTrue(maybeUser.isEmpty());
-    }
-
-
-    @Test
     void userConvertedToMapById() {
         userService.add(JOHN, SARAH);
         Map<Integer, User> users = userService.getAllConvertedMapValue();
@@ -115,31 +87,6 @@ class UserServiceTest {
 
     }
 
-    @Test
-    void throwExceptionIfUserNameOrPasswordNull() {
-        // bad practice
-        try {
-            userService.login(null, "test_123");
-            Assertions.fail("login should throw exception on null username");
-        } catch (IllegalArgumentException e) {
-            assertTrue(true);
-        }
-    }
-
-    @Test
-//    @org.junit.Test(expected = IllegalArgumentException.class)     /*для нижеуказанного функционала,в старых версиях junit4 надо было использовать в аннотации */
-    void throwExceptionIfUserNameOrPasswordNull2() {
-//        best practice
-//        assertThrows(IllegalArgumentException.class,() -> userService.login(null,"test_123"));
-        assertAll(
-                () -> {
-                    var exception = assertThrows(IllegalArgumentException.class, () -> userService.login(null, "test_123"));
-                    org.assertj.core.api.Assertions.assertThat(exception.getMessage()).isEqualTo("username or password can't be null");
-                },
-                () -> assertThrows(IllegalArgumentException.class, () -> userService.login("test_123", null))
-        );
-    }
-
     @AfterEach
     void closeConnection() {
         System.out.println("After Each " + this);
@@ -148,6 +95,70 @@ class UserServiceTest {
     @AfterAll
     void clear() {
         System.out.println("After All: " + this);
+    }
+
+    @Nested
+    @DisplayName("login functionality test")
+    class TestLogin {
+
+        @Test
+        @Tag("login")
+        @Order(1)
+        void loginSuccessIfUserExists() {
+            userService.add(JOHN);
+//    assertj
+            Optional<User> maybeUser = userService.login(JOHN.getUsername(), JOHN.getPassword());
+            org.assertj.core.api.Assertions.assertThat(maybeUser).isPresent();
+//        assertTrue(maybeUser.isPresent());
+
+            maybeUser.ifPresent(user -> org.assertj.core.api.Assertions.assertThat(user).isEqualTo(JOHN));
+//        maybeUser.ifPresent(user -> assertEquals(JOHN,user));
+
+        }
+
+        @Test
+        @Tag("login")
+        @Order(2)
+        void logicFailureIfUserDoesNotExist() {
+            userService.add(SARAH);
+
+            Optional<User> maybeUser = userService.login("dummy", SARAH.getPassword());
+            assertTrue(maybeUser.isEmpty());
+        }
+
+        @Test
+        void logicFailureIfPasswordNotCorrect() {
+            userService.add(SARAH);
+
+            Optional<User> maybeUser = userService.login(SARAH.getUsername(), "test_dummy");
+
+            assertTrue(maybeUser.isEmpty());
+        }
+
+        @Test
+        void throwExceptionIfUserNameOrPasswordNull() {
+            // bad practice
+            try {
+                userService.login(null, "test_123");
+                Assertions.fail("login should throw exception on null username");
+            } catch (IllegalArgumentException e) {
+                assertTrue(true);
+            }
+        }
+
+        @Test
+//    @org.junit.Test(expected = IllegalArgumentException.class)     /*для нижеуказанного функционала,в старых версиях junit4 надо было использовать в аннотации */
+        void throwExceptionIfUserNameOrPasswordNull2() {
+//        best practice
+//        assertThrows(IllegalArgumentException.class,() -> userService.login(null,"test_123"));
+            assertAll(
+                    () -> {
+                        var exception = assertThrows(IllegalArgumentException.class, () -> userService.login(null, "test_123"));
+                        org.assertj.core.api.Assertions.assertThat(exception.getMessage()).isEqualTo("username or password can't be null");
+                    },
+                    () -> assertThrows(IllegalArgumentException.class, () -> userService.login("test_123", null))
+            );
+        }
     }
 
 }
