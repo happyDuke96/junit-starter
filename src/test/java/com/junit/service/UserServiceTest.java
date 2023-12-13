@@ -1,7 +1,9 @@
 package com.junit.service;
 
 import com.junit.dto.User;
+import com.junit.paramresolver.UserServiceParameterResolver;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +32,13 @@ import static org.junit.jupiter.api.Assertions.*;
          * Пара тестов, которые должны выполняться в определенном порядке, т.е. один тест меняет глобальное состояние системы
          * (глобальные переменные, данные в базе данных) и от этого зависит следующий тест(ы). */
 //@TestMethodOrder(MethodOrderer.Random.class)
+    /**Dependency Injection - механизм предоставления каких либо параметра либо класса,в отличие spring
+     * в JUnit5 эти параметры или классы(включая различные метаданные) предоставляется с помощью ParameterResolver
+     * создаем custom Parameter Resolve чтобы этот parameterResolver работал нам надо объявлять его внутри аннотации @ExtendWith
+     * */
+@ExtendWith({
+        UserServiceParameterResolver.class
+})
 class UserServiceTest {
 
     private UserService userService;
@@ -37,19 +46,28 @@ class UserServiceTest {
     private static final User SARAH = User.of(2, "Sarah", "111");
 
 
+    UserServiceTest(TestInfo testInfo){
+        System.out.println(testInfo.getTestMethod());
+        System.out.println(testInfo.getTestClass());
+        System.out.println(testInfo.getDisplayName());
+        System.out.println(testInfo.getTags());
+    }
+
     @BeforeAll
     void init() {
         System.out.println("Before All: " + this);
     }
 
     @BeforeEach
-    void prepare() {
-        this.userService = new UserService();
+    void prepare(UserService userService) {
+        this.userService = userService;
+        System.out.println("USERSERVICE : Before Each" + userService.toString());
         System.out.println("Before Each " + this);
     }
 
     @Test
     void usersEmptyIfUsersNotAdded() {
+        System.out.println("USERSERVICE : usersEmptyIfUsersNotAdded" + userService.toString());
         var users = userService.getAll();
 
         //hamcrest
@@ -62,6 +80,7 @@ class UserServiceTest {
 
     @Test
     void usersSizeIfUsersAdded() {
+        System.out.println("USERSERVICE : usersSizeIfUsersAdded" + userService.toString());
         userService.add(JOHN, SARAH);
 
         var users = userService.getAll();
