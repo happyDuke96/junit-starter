@@ -7,11 +7,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.*;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
  * Lifecycle Test - @BeforeAll -- @BeforeEach -- Test -- @AfterEach -- @AfterAll
@@ -240,6 +243,63 @@ class UserServiceTest {
                 Arguments.of("John",null,Optional.empty()), // password not valid argument case
                 Arguments.of(null,"111",Optional.empty()) // username not valid argument case
         );
+    }
+
+
+    /** Flaky - означает что тест не стабильный,когда запускаем тесты они могут быть не правильно реализованы например
+     * когда не очищаем базы данных после теста и это могут влияют на других тестов,по умолчанию тесты не должны завязывать друг от друга
+     * если найдем такой тест который влияет на выполнение других тестов,можем игнорить с помощью аннотаций @Disabled
+     * TimeOut - обычно они используется для интеграционных и accepted тестов,потому что унит тесты быстрее запускается и не нуждается для таймаутов
+     * @org.junit.jupiter.api.TimeOut - лучше использовать его над классом, потому что внутри метода ассерты больше всего используется  и работает для всех классов
+     * */
+    @Nested
+    @DisplayName("Flaky TimeOut Sample")
+//    @Timeout(value = 200,unit = TimeUnit.MILLISECONDS)
+    public class FlakyAndTimeOutTestSample {
+
+
+        @Test
+        @Disabled("игнорировали в пользу flaky")
+        void failureIfPasswordNotCorrect(){
+            userService.add(SARAH);
+
+            Optional<User> maybeUser = userService.login("Sarah", null);
+
+            assertTrue(maybeUser.isEmpty());
+        }
+
+        // чтобы  уменьшить количество flaky тестов можем запускать несколько раз указывая количество запусков и названию
+        @Test
+        @RepeatedTest(value = 4,name = RepeatedTest.LONG_DISPLAY_NAME)
+        void testForFindFlakyTest(RepetitionInfo repetitionInfo){
+            userService.add(SARAH);
+
+            System.out.println(repetitionInfo.getCurrentRepetition());
+            System.out.println(repetitionInfo.getTotalRepetitions());
+            Optional<User> maybeUser = userService.login("Sarah", SARAH.getPassword());
+
+            assertFalse(maybeUser.isEmpty());
+        }
+
+        @Test
+        void testLoginFunctionalityPerformance(){
+            var result = assertTimeout(Duration.ofMillis(200L), () -> {
+                Thread.sleep(300L); // напоминание здесь не нужно перехватить exception,Executable сам пробрасывает @see method execute()
+                return userService.login("Sarah", SARAH.getPassword());
+            });
+        }
+
+        @Test
+        void testLoginFunctionalityPerformance2(){
+            System.out.println(Thread.currentThread().getName());
+            /* в отличие assertTimeout,assertTimeoutPreemptively запускает Executable в отдельном потоке,допустим мы используем spring и хотим проверять
+              базу данных то в этом случае скорее надо юзать assertTimeout потому что в спринге транзакции завязаны в ThreadLocal объект */
+            var result = assertTimeoutPreemptively(Duration.ofMillis(200L), () -> {
+                System.out.println(Thread.currentThread().getName());
+                Thread.sleep(300L); // напоминание здесь не нужно перехватить exception,Executable сам пробрасывает @see method execute()
+                return userService.login("Sarah", SARAH.getPassword());
+            });
+        }
     }
 
 }
