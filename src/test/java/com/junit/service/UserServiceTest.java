@@ -1,7 +1,7 @@
 package com.junit.service;
 
 import com.junit.dto.User;
-import com.junit.paramresolver.UserServiceParameterResolver;
+import com.junit.extension.UserServiceParameterResolver;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
