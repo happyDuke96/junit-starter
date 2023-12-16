@@ -4,9 +4,12 @@ import com.junit.dto.User;
 import com.junit.paramresolver.UserServiceParameterResolver;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.*;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -178,6 +181,65 @@ class UserServiceTest {
                     () -> assertThrows(IllegalArgumentException.class, () -> userService.login("test_123", null))
             );
         }
+
+        /** @ParameterizedTest - благодаря Dependency Injection(Junit5) можем параметризовать тесты,дать значение для входных параметров,с помощью ArgumentsProvider
+         * @see @ArgumentsSource - базовый  интерфейс  -> ArgumentsProvider
+         * @NullSource -> NullArgumentsProvider, пареметризует только один параметр с значением null
+         * @EmptySource -> EmptyArgumentsProvider, пареметризует только один параметр с пустой строкой
+         * @NullAndEmptySource -> объединяет два argument provider @NullSource,@EmptySource
+         * @MethodSource -> MethodArgumentsProvider,самый распространенный способ грубо говоря вставляет значение возвращаемого из указанного метода
+         *
+         */
+        @ParameterizedTest
+//        @NullSource
+//        @EmptySource
+//        @NullAndEmptySource
+        @MethodSource
+        void loginWithParametrizedTest(String username) {
+            userService.add(SARAH);
+
+            Optional<User> maybeUser = userService.login(username, null);
+
+            assertTrue(maybeUser.isEmpty());
+        }
+
+        @ParameterizedTest(name = "{arguments} nameForEachParamTest1") // by default {index}
+        // в этом случае не можем не можем создать статический метод внутри вложенного класса,по этому создаем метод  для аргументов снаружи класса и добавим путь к методу
+        @MethodSource("com.junit.service.UserServiceTest#argumentsForParametrizedLoginTest")
+        void loginWithParametrizedTest2(String username,String password,Optional<User> user) {
+            userService.add(JOHN,SARAH);
+
+            Optional<User> maybeUser = userService.login(username, password);
+
+            org.assertj.core.api.Assertions.assertThat(maybeUser).isEqualTo(user);
+        }
+
+        @ParameterizedTest(name = "{arguments} nameForEachParamTest2") // by default {index}
+//        @CsvSource({
+//                "John","123",
+//                "Sarah","111"
+//        })  можно без файлов проста в виде строки
+
+        @CsvFileSource(resources = "/login-arguments.csv",delimiter = ',',numLinesToSkip = 1)
+        // numLinesToSkip - пропускает первую линию,headers = USERNAME,PASSWORD
+        // delimiter - по умолчанию запятая,можно изменить исходя из csv файл
+        // resources - путь к csv файл аргументов
+        void loginWithParametrizedTest3(String username,String password) {
+            userService.add(JOHN,SARAH);
+
+            Optional<User> maybeUser = userService.login(username, password);
+
+            org.assertj.core.api.Assertions.assertThat(maybeUser).isEqualTo(null);
+        }
+    }
+
+    static Stream<Arguments> argumentsForParametrizedLoginTest(){
+        return Stream.of(
+                Arguments.of("John","123",Optional.of(JOHN)), // valid argument case
+                Arguments.of("Sarah","111",Optional.of(SARAH)), // valid argument case
+                Arguments.of("John",null,Optional.empty()), // password not valid argument case
+                Arguments.of(null,"111",Optional.empty()) // username not valid argument case
+        );
     }
 
 }
