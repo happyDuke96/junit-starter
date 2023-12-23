@@ -1,5 +1,6 @@
 package com.junit.extension;
 
+import com.junit.dao.UserDao;
 import com.junit.service.UserService;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
@@ -21,7 +22,7 @@ public class UserServiceParameterResolver implements ParameterResolver {
         // в тесте вызывается,и потом новый создается,если у нас @BeforeEach(при этом не будет каждый раз новый создать ) отсутствует мы можем кэшировать параметры с помощью store
 //        var store = extensionContext.getStore(ExtensionContext.Namespace.create(extensionContext.getTestMethod())); // здесь берется один объект для каждого тест из store
         var store = extensionContext.getStore(ExtensionContext.Namespace.create(UserService.class));
-        return store.getOrComputeIfAbsent(UserService.class, obj -> new UserService());
+        return store.getOrComputeIfAbsent(UserService.class, obj -> new UserService(new UserDao()));
 //        return store.getOrComputeIfAbsent(extensionContext.getTestMethod(), obj -> new UserService());
     }
 }

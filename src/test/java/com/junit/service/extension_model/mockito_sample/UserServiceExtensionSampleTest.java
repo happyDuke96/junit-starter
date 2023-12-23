@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 //@ExtendWith({
 //        UserServiceParameterResolver.class
 //})
-class UserServiceTestExtensionSample extends TestBase {
+class UserServiceExtensionSampleTest extends TestBase {
 
     private UserService userService;
     private static final User JOHN = User.of(1, "John", "123");
