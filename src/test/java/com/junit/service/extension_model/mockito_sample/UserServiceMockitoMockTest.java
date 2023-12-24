@@ -6,7 +6,10 @@ import com.junit.extension.*;
 import com.junit.service.UserService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,10 +38,13 @@ import static org.assertj.core.api.Assertions.assertThat;
         UserServiceParameterResolver.class,
         PostProcessingExtension.class,
         ConditionalExtension.class,
+        MockitoExtension.class
 })
 class UserServiceMockitoMockTest {
 
+    @InjectMocks // объект вызывающий mock объект,доступно @ExtendWith -> MockitoExtension.class
     private UserService userService;
+    @Mock // Mockito.mock() alternative,доступно @ExtendWith -> MockitoExtension.class
     private UserDao userDao;
     private static final User JOHN = User.of(1, "John", "123");
     private static final User SARAH = User.of(2, "Sarah", "111");
@@ -52,8 +58,9 @@ class UserServiceMockitoMockTest {
     @BeforeEach
     void prepare() {
         System.out.println("Before Each " + this);
-        this.userDao = Mockito.mock(UserDao.class);
-        this.userService = new UserService(userDao);
+        Mockito.when(userDao.delete(JOHN.getId())).thenReturn(true);
+//        this.userDao = Mockito.mock(UserDao.class);
+//        this.userService = new UserService(userDao);
     }
 
 
@@ -68,9 +75,9 @@ class UserServiceMockitoMockTest {
 
         /* этот подход более читабельный,но в некоторых случаев(для STUB) не всегда работает,
            первый результат возвращает true после для всех вызовов возвращается false */
-        Mockito.when(userDao.delete(JOHN.getId()))
-                .thenReturn(true)
-                .thenReturn(false);
+//        Mockito.when(userDao.delete(JOHN.getId()))
+//                .thenReturn(true)
+//                .thenReturn(false);
 
         var deleteResult = userService.delete(JOHN.getId());
         System.out.println(deleteResult);
@@ -79,18 +86,6 @@ class UserServiceMockitoMockTest {
         assertThat(deleteResult).isTrue();
     }
 
-    @Test
-    void shouldDeleteExistedUserSpySample() {
-        userService.add(JOHN);
-        Mockito.when(userDao.delete(JOHN.getId()))
-                .thenReturn(true)
-                .thenReturn(false);
-
-        var deleteResult = userService.delete(JOHN.getId());
-        System.out.println(userService.delete(JOHN.getId()));
-        System.out.println(userService.delete(JOHN.getId()));
-        assertThat(deleteResult).isTrue();
-    }
 
     @AfterEach
     void closeConnection() {
