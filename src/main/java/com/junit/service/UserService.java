@@ -1,48 +1,57 @@
 package com.junit.service;
 
 import com.junit.dao.UserDao;
-import com.junit.dto.User;
+import com.junit.dto.CreateUserDto;
+import com.junit.dto.UserDto;
+import com.junit.exception.ValidationException;
+import com.junit.mapper.CreateUserMapper;
+import com.junit.mapper.UserMapper;
+import com.junit.validator.CreateUserValidator;
+import lombok.NoArgsConstructor;
+import lombok.SneakyThrows;
 
-import java.util.*;
+import java.util.Optional;
 
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
+import static lombok.AccessLevel.PRIVATE;
 
+
+@NoArgsConstructor(access = PRIVATE)
 public class UserService {
 
-    private final List<User> users = new ArrayList<>();
-    private final UserDao userDao;
+    private static final UserService INSTANCE = new UserService();
 
-    public UserService(UserDao userDao) {
+    private CreateUserValidator createUserValidator = CreateUserValidator.getInstance();
+    private UserDao userDao = UserDao.getInstance();
+    private CreateUserMapper createUserMapper = CreateUserMapper.getInstance();
+    private UserMapper userMapper = UserMapper.getInstance();
+
+    public UserService(CreateUserValidator createUserValidator, UserDao userDao,
+                       CreateUserMapper createUserMapper,
+                       UserMapper userMapper){
+        this.createUserValidator = createUserValidator;
         this.userDao = userDao;
+        this.createUserMapper = createUserMapper;
+        this.userMapper = userMapper;
     }
 
-    public List<User> getAll() {
-        return users;
+    public static UserService getInstance() {
+        return INSTANCE;
     }
 
-    public boolean add(User... user) {
-        return users.addAll(Arrays.asList(user));
+    public Optional<UserDto> login(String email, String password) {
+        return userDao.findByEmailAndPassword(email, password)
+                .map(userMapper::map);
     }
 
-    public boolean delete(Integer userid){
-        return userDao.delete(userid);
-    }
-
-
-    public Optional<User> login(String username, String password) {
-        if (username == null || password == null){
-            throw new IllegalArgumentException("username or password can't be null");
+    @SneakyThrows
+    public UserDto create(CreateUserDto userDto) {
+        var validationResult = createUserValidator.validate(userDto);
+        if (validationResult.hasErrors()) {
+            throw new ValidationException(validationResult.getErrors());
         }
+        var userEntity = createUserMapper.map(userDto);
+        userDao.save(userEntity);
 
-        return users.stream()
-                .filter(user -> user.getUsername().equals(username))
-                .filter(user -> user.getPassword().equals(password))
-                .findFirst();
-    }
-
-    public Map<Integer, User> getAllConvertedMapValue() {
-        return users.stream()
-                .collect(toMap(User::getId, identity()));
+        return userMapper.map(userEntity);
     }
 }
